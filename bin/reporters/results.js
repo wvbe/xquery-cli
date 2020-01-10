@@ -1,3 +1,5 @@
+const os = require('os');
+
 function stringifyResult(result) {
 	if (!result) {
 		return result;
@@ -7,8 +9,7 @@ function stringifyResult(result) {
 	}
 
 	if (Array.isArray(result)) {
-		throw new Error('Beep boop baap nerf');
-		return result.map(res => stringifyResult(res));
+		return result.map(res => stringifyResult(res)).join(os.EOL);
 	}
 
 	if (typeof result === 'object' && result.nodeType === 1) {
@@ -26,6 +27,10 @@ function stringifyResult(result) {
 
 module.exports = (_req, events, _stream) => {
 	events.on('file', (file, i) => {
+		if (!file.$value) {
+			// An error occurred, but we're not logging that here
+			return;
+		}
 		file.$value.forEach(result => {
 			console.log(stringifyResult(result));
 		});

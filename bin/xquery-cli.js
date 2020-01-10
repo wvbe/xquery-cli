@@ -132,7 +132,7 @@ new Command()
 			.setDefault([null])
 			.setResolver(value =>
 				!value.length
-					? [REPORTERS_BY_NAME.events, REPORTERS_BY_NAME.results]
+					? [REPORTERS_BY_NAME.results]
 					: value
 							.filter(name => !!name)
 							.map(reporterName => {

@@ -5,6 +5,9 @@
 	"bin": {
 		"xquery-cli": "bin/xquery-cli.js"
 	},
+	"scripts": {
+		"demo": "cat examples/simple-query.xqm| node ./bin/xquery-cli 'examples/xml/*.dita' -r results"
+	},
 	"dependencies": {
 		"ask-nicely": "^3.0.2",
 		"fontoxpath": "^3.9.2",

@@ -1,113 +1,68 @@
-# XML generator
+# XQuery CLI
 
-Generate a bunch of lorem-ipsum XML documents for testing one software or another. Uses XQuery modules and provides a
-library for interacting with `fs` and `lorem-ipsum`.
+This lib lets you run XPath/XQuery on a large number of XML documents.
 
-## Step 1: Have an XQuery module
+For now, only queries are supported -- writing changes back to file system may be implemented in the future
 
-Write one for whichever XML structure you want to generate. You can import and use the
-`https://github.com/wvbe/xml-generator/ns` namespace for functions to generate randomized data as well as writing stuff
-to disk.
+## Install
 
-For example, `my-module.xqm`:
-
-```xquery
-import module namespace generator = "https://github.com/wvbe/xml-generator/ns";
-
-generator:create-document-for-node(
-	$destination,
-	<nerf>
-		<title>Random XML test</title>
-		<p>{generator:random-phrase()}</p>
-	</nerf>
-)
+```
+npm i wvbe/xquery-cli -g
 ```
 
-Feel free to also import other XQuery (library) modules:
+## Usage
 
-```xquery
-import module namespace nerf = "https://nerf.nerf/ns" at "./nerf.xql";
+Given a directory `my-documents/`, you could use it like so:
+
+```
+xquery-cli --expression "count(//table)" "my-documents/**/*.xml"
 ```
 
-## Step 2: Run via command line
+Or, if your query is more complex than that, save it as a file and:
 
-```sh
-xml-generator my-module.xqm my-xml.xml
+```
+xquery-cli "my-documents/**/*.xml" my-query.xqm
 ```
 
-# Examples
+Or the equivalent
 
-Everything in `examples/` is exemplary. It's a good demonstration of how to generate a realistic set of data: DITA maps,
-topics, and JATS articles.
-
-# Generator XQuery library
-
-The following functions become available from the `generator` module if you import it as shown above:
-
-```xquery
-declare function generator:create-document-for-node (
-	$fileName as xs:string,
-	$node as node()
-) as xs:string;
-
-declare function generator:create-document-name-for-child (
-	$parentFileName as xs:string,
-	$childBaseName as xs:string
-) as xs:string;
-
-declare function generator:log (
-	$message as item()*
-) as xs:boolean;
-
-declare function generator:random-boolean (
-	$probability as xs:double
-) as xs:boolean;
-
-declare function generator:random-number (
-	$min as xs:double,
-	$max as xs:double
-) as xs:double;
-
-declare function generator:random-phrase () as xs:string;
-
-declare function generator:random-words (
-	$length as xs:double
-) as xs:string;
-
-declare function generator:random-paragraph () as xs:string;
-
-declare function generator:random-controlled-value (
-	$options as item()*
-) as item()*;
-
-declare function generator:random-mixed-content (
-	$sentence as xs:string,
-	$contentModels as array(*)
-) as item()*;
-
-declare function generator:random-content (
-	$contentModels as array(*)
-) as item()*;
-
-declare function generator:random-content (
-	$contentModels as array(*),
-	$callbackArg as item()*
-) as item()*;
+```
+cat my-query.xqm" | xquery-cli "my-documents/**/*.xml"
 ```
 
-# License
+## Reporting
 
-Copyright (c) 2019 Wybe Minnebo
+By default, every result is printed to STDOUT on its own line. This is the `results` reporter (`--reporters results`).
+Hopefully this makes it easier to use `xquery-cli` in other automation.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
-documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
-rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
-persons to whom the Software is furnished to do so, subject to the following conditions:
+By default, XPath maps (translates to JS objects) are printed as a line of tab-separated values:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
-Software.
+```
+echo "map {
+  'amountOfConrefs': count(//@conref),
+  'amountOfTables': count(//table),
+  'topicTitle': normalize-space(/*/title/string())
+}" | xquery-cli "examples/xml/**/*.dita"
+```
 
-**THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
-WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.**
+Yields:
+
+```
+1       0       Notifications
+0       0       Analytical reporting with
+0       1       Resource actions and destinations
+12      1       Standard responses
+0       0       About job submission from active running jobs
+```
+
+Another reporter, `--reporters events` will print the query progress to STDERR, so you can pipe the actual results
+to a file while still enjoying a clear view of what's going on:
+
+```
+xquery-cli "my-documents/**/*.xml" --expression "count(//@conref)" --reporters results events > output.txt
+```
+
+## Acknowledgements
+
+This tool relies heavily on the excellent (fontoxpath)[https://www.npmjs.com/package/fontoxpath],
+(slimdom)[https://www.npmjs.com/package/slimdom] and [saxes](https://www.npmjs.com/package/saxes).

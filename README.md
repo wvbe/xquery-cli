@@ -64,5 +64,5 @@ xquery-cli "my-documents/**/*.xml" --expression "count(//@conref)" --reporters r
 
 ## Acknowledgements
 
-This tool relies heavily on the excellent (fontoxpath)[https://www.npmjs.com/package/fontoxpath],
-(slimdom)[https://www.npmjs.com/package/slimdom] and [saxes](https://www.npmjs.com/package/saxes).
+This tool relies heavily on the excellent [fontoxpath](https://www.npmjs.com/package/fontoxpath),
+[slimdom](https://www.npmjs.com/package/slimdom) and [saxes](https://www.npmjs.com/package/saxes).

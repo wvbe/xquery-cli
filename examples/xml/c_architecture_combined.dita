@@ -3,11 +3,11 @@
 <concept id="conceptId">
  <title><term conkeyref="r_productname_variables/ph_companyname"/>
   <term conkeyref="r_productname_variables/ph_prodname"/> features and
-  benefits</title>
+  benefits</title><!-- nerf -->
  <shortdesc><term conkeyref="r_productname_variables/ph_prodname"/> components work
   together to give you the advanced cluster management and reporting capabilities that you need
   within a large computing environment.</shortdesc>
- <conbody>
+ <conbody><?pi ?>
   <section id="section_mtx_smc_rr">
    <p>The <term conkeyref="r_productname_variables/ph_companyname"/>
     <term conkeyref="r_productname_variables/ph_prodname"/> computing management
@@ -18,7 +18,7 @@
     of security. <fig>
      <image conkeyref="r_image_warehouse/image_f2g_mft_qr" id="image_zf4_pnc_rr"/>
     </fig></p>
-  </section>  
+  </section>
   <section id="section_p1h_jcz_qr">
    <title>Key <term conkeyref="r_productname_variables/ph_prodname"/> benefits</title>
    <p>

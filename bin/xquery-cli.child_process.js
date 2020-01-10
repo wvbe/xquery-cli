@@ -1,8 +1,16 @@
 'use strict';
 
 const fs = require('fs');
-const { sync } = require('slimdom-sax-parser');
+const { sync, slimdom } = require('slimdom-sax-parser');
 const { evaluateXPath, registerXQueryModule } = require('fontoxpath');
+
+function serializeResult(result) {
+	if (result instanceof slimdom.Node) {
+		return slimdom.serializeToWellFormedString(result);
+	}
+
+	return result;
+}
 
 async function runQuery(expression, fileName) {
 	try {
@@ -17,7 +25,7 @@ async function runQuery(expression, fileName) {
 
 		process.send({
 			$fileName: fileName,
-			$value: Array.isArray(value) ? value : [value]
+			$value: (Array.isArray(value) ? value : [value]).map(serializeResult)
 		});
 	} catch (error) {
 		process.send({

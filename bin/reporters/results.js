@@ -12,10 +12,6 @@ function stringifyResult(result) {
 		return result.map(res => stringifyResult(res)).join(os.EOL);
 	}
 
-	if (typeof result === 'object' && result.nodeType === 1) {
-		return result.outerHTML;
-	}
-
 	if (typeof result === 'object' && Object.keys(result).length > 0) {
 		return Object.keys(result)
 			.map(key => result[key])

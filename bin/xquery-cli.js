@@ -12,7 +12,8 @@ const npmlog = require('npmlog');
 const { getXQueryModulesInDependencyOrder } = require('../src/fontoxpathModuleContext');
 const REPORTERS_BY_NAME = {
 	events: require('./reporters/events'),
-	results: require('./reporters/results')
+	results: require('./reporters/results'),
+	postprocess: require('./reporters/post-process')
 };
 
 async function getCliInputData(xpath, xqueryModuleLocation) {
@@ -126,24 +127,16 @@ new Command()
 			.isRequired(false)
 	)
 	.addOption(
+		new Option('post-process')
+			.setShort('p')
+			.setDescription('Post process the results')
+			.isRequired(false)
+	)
+	.addOption(
 		new MultiOption('reporters')
 			.setShort('r')
 			.setDescription('Any number of reporters, space separated: events results')
 			.setDefault([null])
-			.setResolver(value =>
-				!value.length
-					? [REPORTERS_BY_NAME.results]
-					: value
-							.filter(name => !!name)
-							.map(reporterName => {
-								if (!REPORTERS_BY_NAME[reporterName]) {
-									`Reporter "${reporterName}" does not exist, use any of: ${Object.keys(
-										REPORTERS_BY_NAME
-									).join(' ')}`;
-								}
-								return REPORTERS_BY_NAME[reporterName];
-							})
-			)
 	)
 	.addOption(
 		new Option('batch')
@@ -165,7 +158,31 @@ new Command()
 	.setController(async req => {
 		// Prepare an event listener and let all reporters add their listeners
 		const events = new EventEmitter();
-		req.options.reporters.forEach(reporter => reporter(req, events, process.stdout));
+
+		if (req.options['post-process']) {
+			if (!req.options.reporters.length) {
+				req.options.reporters.push('events');
+			}
+			if (req.options.reporters.includes('results')) {
+				req.options.reporters.splice(req.options.reporters.indexOf('results'));
+			}
+			req.options.reporters.push('postprocess');
+		}
+		if (!req.options.reporters.length) {
+			req.options.reporters.push('results');
+		}
+
+		req.options.reporters
+			.filter(name => !!name)
+			.map(reporterName => {
+				if (!REPORTERS_BY_NAME[reporterName]) {
+					`Reporter "${reporterName}" does not exist, use any of: ${Object.keys(
+						REPORTERS_BY_NAME
+					).join(' ')}`;
+				}
+				return REPORTERS_BY_NAME[reporterName];
+			})
+			.forEach(reporter => reporter(req, events, process.stdout));
 
 		// Find the files to validate
 		const globbedFiles = req.parameters.glob

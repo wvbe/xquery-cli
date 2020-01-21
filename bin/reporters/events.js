@@ -1,13 +1,5 @@
 const npmlog = require('npmlog');
 
-// Configure the npmlog object
-npmlog.prefixStyle = {};
-
-npmlog.addLevel('verbose', 1000, { fg: 'blue', bg: 'black' }, 'verb')
-npmlog.addLevel('info', 2000, { fg: 'green' })
-npmlog.addLevel('file', 2501, { fg: 'grey' }, 'file');
-npmlog.addLevel('error', 5000, { fg: 'red', bg: 'black' }, 'ERR!');
-
 module.exports = (req, events, _stream) => {
 	const timeStartGlob = Date.now();
 	const stats = {
@@ -43,8 +35,9 @@ module.exports = (req, events, _stream) => {
 		timeStartAnalysis = Date.now();
 	});
 
+	let totalProcessed = 0;
 	events.on('file', (file, i) => {
-		npmlogItem.name = i + 1 + ' of ' + stats.files;
+		npmlogItem.name = ++totalProcessed + ' of ' + stats.files;
 		npmlogItem.completeWork(1);
 
 		// npmlog.file(null, file.$fileNameBase);

@@ -18,7 +18,7 @@ async function runQuery(expression, fileName) {
 			fs.readFile(fileName, 'utf8', (error, data) => (error ? reject(error) : resolve(data)))
 		);
 		const dom = sync(content);
-		const value = evaluateXPath(expression, dom, null, {}, null, {
+		const value = evaluateXPath(expression, dom, null, { 'document-uri': fileName }, null, {
 			language: evaluateXPath.XQUERY_3_1_LANGUAGE,
 			debug: true
 		});

@@ -8,34 +8,23 @@ const path = require('path');
 const { Command, MultiOption, Option, Parameter } = require('ask-nicely');
 const globby = require('globby');
 const npmlog = require('npmlog');
+const { getModules } = require('fontoxpath-module-loader');
 
-const { getXQueryModulesInDependencyOrder } = require('../src/fontoxpathModuleContext');
 const REPORTERS_BY_NAME = {
 	events: require('./reporters/events'),
 	results: require('./reporters/results'),
 	postprocess: require('./reporters/post-process')
 };
 
-async function getCliInputData(xpath, xqueryModuleLocation) {
-	const modules = xqueryModuleLocation
-		? getXQueryModulesInDependencyOrder(xqueryModuleLocation)
-		: null;
-
-	if (modules && xpath) {
-		throw new Error('You cannot use both an XQuery (main) module and an XPath expression');
-	}
-
-	if (modules) {
-		const mainModule = modules.find(mod => mod.main);
-		return {
-			expression: mainModule.contents,
-			modules: modules.filter(mod => mod !== mainModule)
-		};
-	}
-	return {
-		expression: xpath,
-		modules: []
-	};
+async function getModulesFromInput(expression, location) {
+	return getModules(
+		(referrer, target) => {
+			const from = referrer ? path.dirname(referrer) : process.cwd();
+			return path.resolve(from, target);
+		},
+		target => (target ? fs.readFileSync(target, 'utf8') : expression),
+		location
+	);
 }
 
 async function getStreamedInputData() {
@@ -50,13 +39,11 @@ async function getStreamedInputData() {
 		}
 	});
 
-	return new Promise(resolve =>
-		process.stdin.on('end', () => resolve({ expression: data, modules: [] }))
-	);
+	return new Promise(resolve => process.stdin.on('end', () => resolve(data)));
 }
 
 // Serially send a bunch of file names off to a child process and call onResult every time there's a result
-function gatherResultsFromChildProcesses({ files, modules, expression, batch }, onResult) {
+function gatherResultsFromChildProcesses({ files, modules, batch }, onResult) {
 	return (function readNextBatch(fileList, accum = []) {
 		const slice = fileList.length > batch ? fileList.slice(0, batch) : fileList;
 		const nextSlice = fileList.length > batch ? fileList.slice(batch) : [];
@@ -81,7 +68,6 @@ function gatherResultsFromChildProcesses({ files, modules, expression, batch }, 
 			child.send({
 				type: 'run',
 				fileList: slice,
-				expression,
 				modules
 			});
 		}).then(doms => {
@@ -196,13 +182,14 @@ new Command()
 			throw new Error('No use running an expression if you have no files.');
 		}
 
-		const { expression, modules } =
-			req.options.xpath || req.parameters.main
-				? await getCliInputData(req.options.xpath, req.parameters.main)
-				: (await getStreamedInputData()) || {};
+		const modules = await getModulesFromInput(
+			req.options.xpath || (await getStreamedInputData()),
+			req.parameters.main
+		);
+
 		events.emit('modules', modules);
-		events.emit('expression', expression);
-		if (!expression) {
+		events.emit('expression', modules.main.contents);
+		if (!modules.main) {
 			throw new Error('Your XPath expression should not be empty.');
 		}
 
@@ -212,8 +199,7 @@ new Command()
 			{
 				batch: req.options.batch,
 				files: globbedFiles,
-				modules,
-				expression
+				modules
 			},
 			(result, i) => {
 				if (result.$error) {

@@ -6,7 +6,7 @@ For now, only queries are supported -- writing changes back to file system may b
 
 ## Install
 
-```
+```sh
 npm i wvbe/xquery-cli -g
 ```
 
@@ -14,20 +14,20 @@ npm i wvbe/xquery-cli -g
 
 Given a directory `my-documents/`, you could use it like so:
 
-```
-xquery-cli --expression "count(//table)" "my-documents/**/*.xml"
+```sh
+xquery-cli "my-documents/**/*.xml" --expression "count(//table)"
 ```
 
 Or, if your query is more complex than that, save it as a file and:
 
-```
+```sh
 xquery-cli "my-documents/**/*.xml" my-query.xqm
 ```
 
-Or the equivalent
+Or pipe your query in:
 
-```
-cat my-query.xqm" | xquery-cli "my-documents/**/*.xml"
+```sh
+cat my-query.xqm | xquery-cli "my-documents/**/*.xml"
 ```
 
 ## Reporting
@@ -37,7 +37,7 @@ Hopefully this makes it easier to use `xquery-cli` in other automation.
 
 By default, XPath maps (translates to JS objects) are printed as a line of tab-separated values:
 
-```
+```sh
 echo "map {
   'amountOfConrefs': count(//@conref),
   'amountOfTables': count(//table),
@@ -56,9 +56,9 @@ Yields:
 ```
 
 Another reporter, `--reporters events` will print the query progress to STDERR, so you can pipe the actual results
-to a file while still enjoying a clear view of what's going on:
+to a file while still enjoying a clear view of what's going on. You can use both reporters at the same time:
 
-```
+```sh
 xquery-cli "my-documents/**/*.xml" --expression "count(//@conref)" --reporters results events > output.txt
 ```
 

@@ -66,7 +66,7 @@ module.exports = (req, events, _stream) => {
 		npmlog.verbose(null, '%s documents per second', documentPerSecond);
 
 		if (exitCode > 0) {
-			npmlog.error('Not all documents passed, exiting with non-zero code');
+			npmlog.error('There were some errors, exiting with a non-zero code.');
 		}
 	});
 };

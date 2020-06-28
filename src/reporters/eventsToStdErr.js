@@ -3,12 +3,12 @@ const npmlog = require('npmlog');
 module.exports = (req, events, _stream) => {
 	const timeStartGlob = Date.now();
 	const stats = {
-		files: null
+		files: null,
 	};
 
 	npmlog.level = req.options['log-level'];
 
-	events.on('files', files => {
+	events.on('files', (files) => {
 		stats.files = files.length;
 
 		npmlog.info(
@@ -18,10 +18,20 @@ module.exports = (req, events, _stream) => {
 			Date.now() - timeStartGlob
 		);
 	});
+	events.on('file', (file, i) => {
+		npmlog.verbose(null, 'Evaluated file\n    %s', file.$fileName);
+	});
 
-	events.on('modules', modules => npmlog.info(null, 'Using %s XQuery modules', modules.length));
+	events.on('modules', (modules) => {
+		npmlog.info(
+			null,
+			'Using %s main and %s library XQuery modules',
+			modules.main ? 1 : 0,
+			modules.libraries.length
+		);
+	});
 
-	events.on('expression', expression =>
+	events.on('expression', (expression) =>
 		npmlog.verbose(null, 'Using expression:\n%s', expression)
 	);
 
@@ -36,24 +46,23 @@ module.exports = (req, events, _stream) => {
 	});
 
 	let totalProcessed = 0;
+
 	events.on('file', (file, i) => {
 		npmlogItem.name = ++totalProcessed + ' of ' + stats.files;
 		npmlogItem.completeWork(1);
 
-		// npmlog.file(null, file.$fileNameBase);
-
 		// It's possible the file could not be read, parsed or other
 		if (file.$error) {
-			npmlog.error(file.$error.message);
+			npmlog.error(`Runtime error in evaluating file`);
+			npmlog.error(`    ${file.$fileName}`);
+			(file.$error.stack || file.$error.message)
+				.split('\n')
+				.forEach((line) => npmlog.error(line));
 			return;
 		}
-
-		// file.$value.forEach(result => {
-		// 	npmlog.data(result);
-		// });
 	});
 
-	events.on('end', exitCode => {
+	events.on('end', (exitCode) => {
 		stats.totalTime = Date.now() - timeStartAnalysis;
 
 		const msPerDocument = (stats.totalTime / stats.files).toFixed(2);
@@ -61,9 +70,18 @@ module.exports = (req, events, _stream) => {
 
 		npmlog.disableProgress();
 
-		npmlog.info(null, 'Done in %s milliseconds', stats.totalTime);
-		npmlog.verbose(null, '%s milliseconds per document', msPerDocument);
-		npmlog.verbose(null, '%s documents per second', documentPerSecond);
+		if (timeStartAnalysis) {
+			npmlog.info(
+				null,
+				'Evaluated %s files in %s milliseconds',
+				stats.files,
+				stats.totalTime
+			);
+			npmlog.verbose(null, '%s milliseconds per document', msPerDocument);
+			npmlog.verbose(null, '%s documents per second', documentPerSecond);
+		} else {
+			npmlog.info(null, 'Quitting before a query was evaluated');
+		}
 
 		if (exitCode > 0) {
 			npmlog.error('There were some errors, exiting with a non-zero code.');

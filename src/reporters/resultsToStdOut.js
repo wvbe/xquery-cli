@@ -1,4 +1,7 @@
+const npmlog = require('npmlog');
 const os = require('os');
+
+npmlog.addLevel('rawOutput', 999999, {}, ' ');
 
 function stringifyResult(result) {
 	if (!result) {
@@ -9,12 +12,12 @@ function stringifyResult(result) {
 	}
 
 	if (Array.isArray(result)) {
-		return result.map(res => stringifyResult(res)).join(os.EOL);
+		return result.map((res) => stringifyResult(res)).join(os.EOL);
 	}
 
 	if (typeof result === 'object' && Object.keys(result).length > 0) {
 		return Object.keys(result)
-			.map(key => result[key])
+			.map((key) => result[key])
 			.join('\t');
 	}
 
@@ -23,12 +26,15 @@ function stringifyResult(result) {
 
 module.exports = (_req, events, _stream) => {
 	events.on('file', (file, i) => {
-		if (!file.$value) {
+		if (file.$error) {
 			// An error occurred, but we're not logging that here
 			return;
 		}
-		file.$value.forEach(result => {
-			console.log(stringifyResult(result));
+		file.$value.forEach((value) => {
+			const previousStream = npmlog.stream;
+			npmlog.stream = process.stdout;
+			npmlog.rawOutput(null, stringifyResult(value));
+			npmlog.stream = previousStream;
 		});
 	});
 };

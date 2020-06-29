@@ -1,68 +1,70 @@
 # XQuery CLI
 
-This lib lets you run XPath/XQuery on a large number of XML documents.
+This lib lets you run XPath/XQuery. Uses child processes to support traversing large numbers of XML documents.
 
 For now, only queries are supported -- writing changes back to file system may be implemented in the future
 
 ## Install
 
 ```sh
-npm i wvbe/xquery-cli -g
+npm i xquery-cli -g
 ```
 
-## Usage
+You can now use the `xq` command.
 
-Given a directory `my-documents/`, you could use it like so:
+## XQuery Expressions
+
+XPath or XQuery expressions can be piped from another process, loaded from an `.xqm` file, or in the `--expression` (`-x`)
+option.
+
+The following input is all equal:
 
 ```sh
-xquery-cli "my-documents/**/*.xml" --expression "count(//table)"
+xq --expression "fn:current-date()" -O
+xq -x "fn:current-date()" -O
+xq --module ./examples/currentDate.xqm -O
 ```
 
-Or, if your query is more complex than that, save it as a file and:
+Or you pipe it in:
+
+```
+echo "fn:current-date()" | xq -O
+cat ./examples/currentDate.xqm | xq -O
+curl -s https://pastebin.com/raw/53pFDEbk | xq -O
+```
+
+## XML files
+
+Any argument that is an option counts as an XML file location for which the expression is evaluated.
+
+```
+xq ./examples/xml/foo.xml -x "()" ./examples/xml/bar.xml
+xq ./examples/xml/*.xml -x "()"
+```
+
+For terminals that don't expand file patterns, or to circumvent a "Too many arguments in command line" error, use
+`--glob` (`-g`):
 
 ```sh
-xquery-cli "my-documents/**/*.xml" my-query.xqm
+xq --glob "./examples/xml/*.xml" -x "()"
+xq -g "./examples/xml/*.xml" -x "()"
 ```
 
-Or pipe your query in:
-
-```sh
-cat my-query.xqm | xquery-cli "my-documents/**/*.xml"
-```
+If you want to use both pattern expansion and the `--glob` flag you are a mad lad. It would be useful to know that you
+may get duplicate results, and results may be ordered differently.
 
 ## Reporting
 
-By default, every result is printed to STDOUT on its own line. This is the `results` reporter (`--reporters results`).
-Hopefully this makes it easier to use `xquery-cli` in other automation.
-
-By default, XPath maps (translates to JS objects) are printed as a line of tab-separated values:
-
-```sh
-echo "map {
-  'amountOfConrefs': count(//@conref),
-  'amountOfTables': count(//table),
-  'topicTitle': normalize-space(/*/title/string())
-}" | xquery-cli "examples/xml/**/*.dita"
-```
-
-Yields:
-
-```
-1       0       Notifications
-0       0       Analytical reporting with
-0       1       Resource actions and destinations
-12      1       Standard responses
-0       0       About job submission from active running jobs
-```
-
-Another reporter, `--reporters events` will print the query progress to STDERR, so you can pipe the actual results
-to a file while still enjoying a clear view of what's going on. You can use both reporters at the same time:
+By default XQuery returns are logged to STDOUT, and event data is logged to STDERR. Use `--no-stdout` (`-o`) or
+`--no-stderr` (`-O`) if you want.
+only events are logged, to STDERR. If you use the `--stdout` (`-o`) option you will also see the output
+returned by your console on STDOUT. Use `--no-stderr` (`-O`) if you are then no longer interested in the events.
 
 ```sh
-xquery-cli "my-documents/**/*.xml" --expression "count(//@conref)" --reporters results events > output.txt
+xq -x "fontoxpath:version()" --no-stderr
 ```
 
 ## Acknowledgements
 
-This tool relies heavily on the excellent [fontoxpath](https://www.npmjs.com/package/fontoxpath),
+This tool relies on the excellent [fontoxpath](https://www.npmjs.com/package/fontoxpath),
 [slimdom](https://www.npmjs.com/package/slimdom) and [saxes](https://www.npmjs.com/package/saxes).

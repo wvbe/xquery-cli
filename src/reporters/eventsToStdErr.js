@@ -1,12 +1,10 @@
 const npmlog = require('npmlog');
 
-module.exports = (req, events, _stream) => {
+module.exports = (events, _stream) => {
 	const timeStartGlob = Date.now();
 	const stats = {
 		files: null,
 	};
-
-	npmlog.level = req.options['log-level'];
 
 	events.on('files', (files) => {
 		stats.files = files.length;
@@ -18,6 +16,7 @@ module.exports = (req, events, _stream) => {
 			Date.now() - timeStartGlob
 		);
 	});
+
 	events.on('file', (file, i) => {
 		npmlog.verbose(null, 'Evaluated file\n    %s', file.$fileName);
 	});
@@ -39,25 +38,38 @@ module.exports = (req, events, _stream) => {
 	let timeStartAnalysis = null;
 	events.on('start', () => {
 		npmlog.enableProgress();
-		npmlog.info(null, `Starting validation`);
+		npmlog.info(null, `Starting evaluation`);
 
 		npmlogItem = npmlog.newItem('0 of ' + stats.files, stats.files);
 		timeStartAnalysis = Date.now();
 	});
 
 	let totalProcessed = 0;
+	let totalErrors = 0;
 
+	events.on('result', ({ $value, $error }) => {
+		// It's possible the file could not be read, parsed or other
+		if ($error) {
+			++totalErrors;
+			npmlog.error(`Runtime error in evaluating expression`);
+			($error.stack || $error.message)
+				.split('\n')
+				.forEach((line, i) => (i ? npmlog.error(null, line) : npmlog.error(line)));
+			return;
+		}
+	});
 	events.on('file', (file, i) => {
 		npmlogItem.name = ++totalProcessed + ' of ' + stats.files;
 		npmlogItem.completeWork(1);
 
 		// It's possible the file could not be read, parsed or other
 		if (file.$error) {
+			++totalErrors;
 			npmlog.error(`Runtime error in evaluating file`);
-			npmlog.error(`    ${file.$fileName}`);
+			npmlog.error(null, `    ${file.$fileName}`);
 			(file.$error.stack || file.$error.message)
 				.split('\n')
-				.forEach((line) => npmlog.error(line));
+				.forEach((line, i) => (i ? npmlog.error(null, line) : npmlog.error(line)));
 			return;
 		}
 	});
@@ -65,26 +77,30 @@ module.exports = (req, events, _stream) => {
 	events.on('end', (exitCode) => {
 		stats.totalTime = Date.now() - timeStartAnalysis;
 
-		const msPerDocument = (stats.totalTime / stats.files).toFixed(2);
-		const documentPerSecond = ((stats.files / stats.totalTime) * 1000).toFixed(2);
+		const msPerDocument = (stats.totalTime / totalProcessed).toFixed(2);
+		const documentPerSecond = ((totalProcessed / stats.totalTime) * 1000).toFixed(2);
 
 		npmlog.disableProgress();
 
-		if (timeStartAnalysis) {
+		if (timeStartAnalysis && stats.files) {
 			npmlog.info(
 				null,
-				'Evaluated %s files in %s milliseconds',
+				'Evaluated %s out of %s files in %s milliseconds',
+				totalProcessed,
 				stats.files,
 				stats.totalTime
 			);
 			npmlog.verbose(null, '%s milliseconds per document', msPerDocument);
 			npmlog.verbose(null, '%s documents per second', documentPerSecond);
+		} else if (timeStartAnalysis && !stats.files) {
+			npmlog.info(null, 'Evaluated expression in %s milliseconds', stats.totalTime);
 		} else {
 			npmlog.info(null, 'Quitting before a query was evaluated');
 		}
+		npmlog.info(null, 'Encountered %s errors', totalErrors);
 
 		if (exitCode > 0) {
-			npmlog.error('There were some errors, exiting with a non-zero code.');
+			npmlog.info(null, 'Exiting process with a non-zero code.');
 		}
 	});
 };

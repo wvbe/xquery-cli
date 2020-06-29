@@ -24,7 +24,17 @@ function stringifyResult(result) {
 	return result;
 }
 
-module.exports = (_req, events, _stream) => {
+module.exports = (events, stream) => {
+	events.on('result', ({ $value, $error }) => {
+		if ($error) {
+			// An error occurred, but we're not logging that here
+			return;
+		}
+		const previousStream = npmlog.stream;
+		npmlog.stream = stream;
+		npmlog.rawOutput(null, stringifyResult($value));
+		npmlog.stream = previousStream;
+	});
 	events.on('file', (file, i) => {
 		if (file.$error) {
 			// An error occurred, but we're not logging that here
@@ -32,7 +42,7 @@ module.exports = (_req, events, _stream) => {
 		}
 		file.$value.forEach((value) => {
 			const previousStream = npmlog.stream;
-			npmlog.stream = process.stdout;
+			npmlog.stream = stream;
 			npmlog.rawOutput(null, stringifyResult(value));
 			npmlog.stream = previousStream;
 		});

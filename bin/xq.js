@@ -117,7 +117,7 @@ async function run(input) {
 	);
 	events.emit('modules', modules);
 
-	if (!modules.main) {
+	if (!modules.main || !modules.main.contents) {
 		throw new Error('Your XPath expression should not be empty.');
 	}
 
@@ -165,9 +165,9 @@ async function run(input) {
 		await run(input);
 	} catch (error) {
 		npmlog.disableProgress();
-		npmlog.error('fatal', error.stack);
-
 		process.exitCode = 1;
+		events.emit('error', error);
+		return;
 	}
 
 	events.emit('end', process.exitCode);

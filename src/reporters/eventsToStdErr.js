@@ -47,30 +47,30 @@ module.exports = (events, _stream) => {
 	let totalProcessed = 0;
 	let totalErrors = 0;
 
+	function logError(caption, error) {
+		++totalErrors;
+		npmlog.error(caption);
+		(error.stack || error.message)
+			.split('\n')
+			.forEach((line, i) => (i ? npmlog.error(null, line) : npmlog.error(line)));
+	}
+
+	events.on('error', (error) => {
+		logError('Fatal error in program', error);
+	});
+
 	events.on('result', ({ $value, $error }) => {
-		// It's possible the file could not be read, parsed or other
 		if ($error) {
-			++totalErrors;
-			npmlog.error(`Runtime error in evaluating expression`);
-			($error.stack || $error.message)
-				.split('\n')
-				.forEach((line, i) => (i ? npmlog.error(null, line) : npmlog.error(line)));
-			return;
+			return logError('Error in expression evaluation', $error);
 		}
 	});
+
 	events.on('file', (file, i) => {
 		npmlogItem.name = ++totalProcessed + ' of ' + stats.files;
 		npmlogItem.completeWork(1);
 
-		// It's possible the file could not be read, parsed or other
 		if (file.$error) {
-			++totalErrors;
-			npmlog.error(`Runtime error in evaluating file`);
-			npmlog.error(null, `    ${file.$fileName}`);
-			(file.$error.stack || file.$error.message)
-				.split('\n')
-				.forEach((line, i) => (i ? npmlog.error(null, line) : npmlog.error(line)));
-			return;
+			return logError('Error in file evaluation', file.$error);
 		}
 	});
 

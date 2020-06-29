@@ -20,17 +20,17 @@ option.
 The following input is all equal:
 
 ```sh
-xq --expression "fn:current-date()" -O
-xq -x "fn:current-date()" -O
-xq --module ./examples/currentDate.xqm -O
+xq --expression "fn:current-date()"
+xq -x "fn:current-date()"
+xq --module ./examples/currentDate.xqm
 ```
 
 Or you pipe it in:
 
 ```
-echo "fn:current-date()" | xq -O
-cat ./examples/currentDate.xqm | xq -O
-curl -s https://pastebin.com/raw/53pFDEbk | xq -O
+echo "fn:current-date()" | xq
+cat ./examples/currentDate.xqm | xq
+curl -s https://pastebin.com/raw/53pFDEbk | xq
 ```
 
 ## XML files
@@ -57,8 +57,6 @@ may get duplicate results, and results may be ordered differently.
 
 By default XQuery returns are logged to STDOUT, and event data is logged to STDERR. Use `--no-stdout` (`-o`) or
 `--no-stderr` (`-O`) if you want.
-only events are logged, to STDERR. If you use the `--stdout` (`-o`) option you will also see the output
-returned by your console on STDOUT. Use `--no-stderr` (`-O`) if you are then no longer interested in the events.
 
 ```sh
 xq -x "fontoxpath:version()" --no-stderr

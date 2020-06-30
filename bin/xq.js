@@ -64,6 +64,11 @@ async function run(input) {
 				options.main = input.shift();
 				continue;
 
+			case '-l':
+			case '--log-level':
+				npmlog.level = input.shift();
+				continue;
+
 			case '-x':
 			case '--expression':
 			case '--xpath':

@@ -27,7 +27,7 @@ xq --module ./examples/currentDate.xqm
 
 Or you pipe it in:
 
-```
+```sh
 echo "fn:current-date()" | xq
 cat ./examples/currentDate.xqm | xq
 curl -s https://pastebin.com/raw/53pFDEbk | xq
@@ -37,7 +37,7 @@ curl -s https://pastebin.com/raw/53pFDEbk | xq
 
 Any argument that is an option counts as an XML file location for which the expression is evaluated.
 
-```
+```sh
 xq ./examples/xml/foo.xml -x "()" ./examples/xml/bar.xml
 xq ./examples/xml/*.xml -x "()"
 ```

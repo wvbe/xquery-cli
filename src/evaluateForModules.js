@@ -17,12 +17,9 @@ module.exports = async function evaluateUpdatingExpressionForModules(
 	variables,
 	options
 ) {
-	const {
-		// pendingUpdateList,
-		xdmValue,
-	} = await fontoxpath.evaluateUpdatingExpression(
+	const { pendingUpdateList, xdmValue } = await fontoxpath.evaluateUpdatingExpression(
 		modules.main.contents,
-		contextNode,
+		contextNode || new slimdom.Document(),
 		null,
 		variables,
 		options

@@ -17,10 +17,6 @@ module.exports = (events, _stream) => {
 		);
 	});
 
-	events.on('file', (file, i) => {
-		npmlog.verbose(null, 'Evaluated file\n    %s', file.$fileName);
-	});
-
 	events.on('modules', (modules) => {
 		npmlog.info(
 			null,
@@ -66,6 +62,8 @@ module.exports = (events, _stream) => {
 	});
 
 	events.on('file', (file, i) => {
+		npmlog.verbose(null, 'Evaluated %s', file.$fileName);
+
 		npmlogItem.name = ++totalProcessed + ' of ' + stats.files;
 		npmlogItem.completeWork(1);
 

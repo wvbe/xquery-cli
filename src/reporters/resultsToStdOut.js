@@ -40,11 +40,10 @@ module.exports = (events, stream) => {
 			// An error occurred, but we're not logging that here
 			return;
 		}
+		npmlog.clearProgress();
 		file.$value.forEach((value) => {
-			const previousStream = npmlog.stream;
-			npmlog.stream = stream;
-			npmlog.rawOutput(null, stringifyResult(value));
-			npmlog.stream = previousStream;
+			console.log(stringifyResult(value));
 		});
+		npmlog.showProgress();
 	});
 };

@@ -25,8 +25,10 @@ module.exports = async function evaluateUpdatingExpressionForModules(
 		options
 	);
 
-	// @TODO Save if there were updates
-	// fontoxpath.executePendingUpdateList(pendingUpdateList);
+	fontoxpath.executePendingUpdateList(pendingUpdateList);
 
-	return (Array.isArray(xdmValue) ? xdmValue : [xdmValue]).map(serializeResult);
+	return {
+		isUpdating: !!pendingUpdateList.length,
+		returnValue: (Array.isArray(xdmValue) ? xdmValue : [xdmValue]).map(serializeResult)
+	};
 };

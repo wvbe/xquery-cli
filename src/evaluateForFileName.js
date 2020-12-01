@@ -1,8 +1,8 @@
 'use strict';
 
-const fs = require('fs');
-const { sync } = require('slimdom-sax-parser');
-const evaluateForModules = require('./evaluateForModules');
+const fs = require('fs/promises');
+const { sync, slimdom } = require('slimdom-sax-parser');
+const evaluateUpdatingExpressionForModules = require('./evaluateForModules');
 
 module.exports = async function evaluateUpdatingExpressionForFileName(
 	modules,
@@ -10,9 +10,18 @@ module.exports = async function evaluateUpdatingExpressionForFileName(
 	variables,
 	options
 ) {
-	const content = await new Promise((resolve, reject) =>
-		fs.readFile(fileName, 'utf8', (error, data) => (error ? reject(error) : resolve(data)))
-	);
+	const content = await fs.readFile(fileName, 'utf8');
 	const dom = sync(content);
-	return evaluateForModules(modules, dom, variables, options);
+	const { returnValue, isUpdating } = await evaluateUpdatingExpressionForModules(
+		modules,
+		dom,
+		variables,
+		options
+	);
+
+	if (isUpdating) {
+		fs.writeFile(fileName, slimdom.serializeToWellFormedString(dom), 'utf8');
+	}
+
+	return returnValue;
 };

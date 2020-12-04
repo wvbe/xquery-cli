@@ -1,12 +1,15 @@
-const npmlog = require('npmlog');
+import { EventEmitter } from 'events';
+import npmlog from 'npmlog';
+import { CrossProcessErrorObject } from '../../types';
 
-module.exports = (events, _stream) => {
+export default (events: EventEmitter, _stream: NodeJS.WriteStream) => {
 	const timeStartGlob = Date.now();
-	const stats = {
-		files: null,
-	};
+	const stats: {
+		files?: number;
+		totalTime?: number;
+	} = {};
 
-	events.on('files', (files) => {
+	events.on('files', files => {
 		stats.files = files.length;
 
 		npmlog.info(
@@ -17,7 +20,7 @@ module.exports = (events, _stream) => {
 		);
 	});
 
-	events.on('modules', (modules) => {
+	events.on('modules', modules => {
 		npmlog.info(
 			null,
 			'Using %s main and %s library XQuery modules',
@@ -26,12 +29,12 @@ module.exports = (events, _stream) => {
 		);
 	});
 
-	events.on('expression', (expression) =>
+	events.on('expression', expression =>
 		npmlog.verbose(null, 'Using expression:\n%s', expression)
 	);
 
-	let npmlogItem = null;
-	let timeStartAnalysis = null;
+	let npmlogItem: any;
+	let timeStartAnalysis: number;
 	events.on('start', () => {
 		npmlog.enableProgress();
 		npmlog.info(null, `Starting evaluation`);
@@ -43,25 +46,27 @@ module.exports = (events, _stream) => {
 	let totalProcessed = 0;
 	let totalErrors = 0;
 
-	function logError(caption, error) {
+	function logError(caption: string, error: CrossProcessErrorObject) {
 		++totalErrors;
 		npmlog.error(caption);
-		(error.stack || error.message)
+		(error.stack || error.message || '')
 			.split('\n')
-			.forEach((line, i) => (i ? npmlog.error(null, line) : npmlog.error(line)));
+			.forEach((line: string, i: number) =>
+				i ? npmlog.error(null, line) : npmlog.error(line)
+			);
 	}
 
-	events.on('error', (error) => {
+	events.on('error', error => {
 		logError('Fatal error in program', error);
 	});
 
-	events.on('result', ({ $value, $error }) => {
+	events.on('result', ({ $error }) => {
 		if ($error) {
 			return logError('Error in expression evaluation', $error);
 		}
 	});
 
-	events.on('file', (file, i) => {
+	events.on('file', file => {
 		npmlog.verbose(null, 'Evaluated %s', file.$fileName);
 
 		npmlogItem.name = ++totalProcessed + ' of ' + stats.files;
@@ -72,7 +77,7 @@ module.exports = (events, _stream) => {
 		}
 	});
 
-	events.on('end', (exitCode) => {
+	events.on('end', exitCode => {
 		stats.totalTime = Date.now() - timeStartAnalysis;
 
 		const msPerDocument = (stats.totalTime / totalProcessed).toFixed(2);

@@ -1,2 +1,6 @@
 node_modules
 examples
+src
+types
+.github
+tsconfig.json

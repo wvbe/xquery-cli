@@ -1,2 +1,8 @@
-node_modules
+.DS_Store
+.github
+*.log
 examples
+node_modules
+src
+tsconfig.json
+types

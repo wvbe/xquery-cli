@@ -19,6 +19,9 @@ function serializeResult(result: XqueryResult): SerializableResult {
 		return result.map(res => serializeResult(res));
 	}
 
+	if (result instanceof Date) {
+		return result.toISOString();
+	}
 	if (typeof result === 'object') {
 		return Object.keys(result).reduce(
 			(obj, key: string) =>

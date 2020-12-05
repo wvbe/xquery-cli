@@ -12,6 +12,8 @@ npm i xquery-cli -g
 
 You can now use the `xq` command.
 
+Alternative to installing `xq`, you can run `npx xquery-cli`
+
 ## XQuery Expressions
 
 XPath or XQuery expressions can be piped from another process, loaded from an `.xqm` file, or in the `--expression` (`-x`)
@@ -22,14 +24,14 @@ The following input is all equal:
 ```sh
 xq --expression "fn:current-date()"
 xq -x "fn:current-date()"
-xq --module ./examples/currentDate.xqm
+xq --module ./examples/simple-example.xqm
 ```
 
 Or you pipe it in:
 
 ```sh
 echo "fn:current-date()" | xq
-cat ./examples/currentDate.xqm | xq
+cat ./examples/simple-example.xqm | xq
 curl -s https://pastebin.com/raw/53pFDEbk | xq
 ```
 

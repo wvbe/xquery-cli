@@ -1,6 +1,6 @@
 {
 	"name": "xquery-cli",
-	"version": "2.0.3",
+	"version": "2.1.0",
 	"description": "A command-line tool for XQuery",
 	"repository": "wvbe/xquery-cli",
 	"author": "wvbe",
@@ -24,8 +24,8 @@
 		"test": "tsdx test --passWithNoTests",
 		"lint": "tsdx lint",
 		"prepare": "tsdx build",
-		"size": "size-limit",
-		"analyze": "size-limit --why"
+		"demo:xpath": "xq -g \"examples/xml/**/*.dita\" -m examples/tabular-data-example.xqm",
+		"demo:xquf": "xq examples/xml/dita/FAQ.dita -m examples/updating-example.xqm"
 	},
 	"dependencies": {
 		"fontoxpath-module-loader": "^1.0.1",

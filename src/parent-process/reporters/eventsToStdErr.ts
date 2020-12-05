@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import npmlog from 'npmlog';
-import { CrossProcessErrorObject } from '../../types';
+import { FileResultEvent, SerializableError, ContextlessResultEvent } from '../../types';
 
 export default (events: EventEmitter, _stream: NodeJS.WriteStream) => {
 	const timeStartGlob = Date.now();
@@ -46,7 +46,7 @@ export default (events: EventEmitter, _stream: NodeJS.WriteStream) => {
 	let totalProcessed = 0;
 	let totalErrors = 0;
 
-	function logError(caption: string, error: CrossProcessErrorObject) {
+	function logError(caption: string, error: SerializableError) {
 		++totalErrors;
 		npmlog.error(caption);
 		(error.stack || error.message || '')
@@ -56,24 +56,24 @@ export default (events: EventEmitter, _stream: NodeJS.WriteStream) => {
 			);
 	}
 
-	events.on('error', error => {
+	events.on('error', (error: SerializableError) => {
 		logError('Fatal error in program', error);
 	});
 
-	events.on('result', ({ $error }) => {
+	events.on('result', ({ $error }: ContextlessResultEvent) => {
 		if ($error) {
 			return logError('Error in expression evaluation', $error);
 		}
 	});
 
-	events.on('file', file => {
-		npmlog.verbose(null, 'Evaluated %s', file.$fileName);
+	events.on('file', ({ $fileName, $error }: FileResultEvent) => {
+		npmlog.verbose(null, 'Evaluated %s', $fileName);
 
 		npmlogItem.name = ++totalProcessed + ' of ' + stats.files;
 		npmlogItem.completeWork(1);
 
-		if (file.$error) {
-			return logError('Error in file evaluation', file.$error);
+		if ($error) {
+			return logError('Error in file evaluation', $error);
 		}
 	});
 

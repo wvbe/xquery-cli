@@ -3,15 +3,14 @@ import fs from 'fs/promises';
 import { slimdom, sync } from 'slimdom-sax-parser';
 import { createChildProcessHandler } from './communication';
 import {
-	CrossProcessErrorMessage,
-	CrossProcessResultMessage,
+	FileResultEvent,
 	FontoxpathOptions,
-	ModuleList,
-	QueryResult,
-	SerializableQueryResult
+	XqueryResult,
+	SerializableResult,
+	XqueryModules
 } from './types';
 
-function serializeResult(result: QueryResult): SerializableQueryResult {
+function serializeResult(result: XqueryResult): SerializableResult {
 	if (result instanceof slimdom.Node) {
 		return slimdom.serializeToWellFormedString(result as any);
 	}
@@ -36,7 +35,7 @@ function serializeResult(result: QueryResult): SerializableQueryResult {
 }
 
 export async function evaluateUpdatingExpressionOnNode(
-	modules: ModuleList,
+	modules: XqueryModules,
 	contextNode: Node | null,
 	variables: object,
 	options: FontoxpathOptions
@@ -58,11 +57,11 @@ export async function evaluateUpdatingExpressionOnNode(
 }
 
 async function evaluateUpdatingExpressionOnFile(
-	modules: ModuleList,
+	modules: XqueryModules,
 	fileName: string,
 	variables: object,
 	options: FontoxpathOptions
-): Promise<SerializableQueryResult[]> {
+): Promise<SerializableResult[]> {
 	const content = await fs.readFile(fileName, 'utf8');
 	const dom = sync(content);
 	const { returnValue, isUpdating } = await evaluateUpdatingExpressionOnNode(
@@ -83,8 +82,8 @@ export function startChildProcess() {
 	process.on(
 		'message',
 		createChildProcessHandler(async (modules, fileName) => {
-			if (!process || !process.send) {
-				throw new Error('Not running from a NodeJS environment');
+			if (!process.send) {
+				throw new Error('Not running from a child process');
 			}
 			try {
 				process.send({
@@ -96,7 +95,7 @@ export function startChildProcess() {
 						{ 'document-uri': fileName },
 						{ debug: true }
 					)
-				} as CrossProcessResultMessage);
+				} as FileResultEvent);
 			} catch (error) {
 				process.send({
 					$fileName: fileName,
@@ -105,7 +104,7 @@ export function startChildProcess() {
 						stack: error.stack || null
 					},
 					$value: null
-				} as CrossProcessErrorMessage);
+				} as FileResultEvent);
 			}
 		})
 	);

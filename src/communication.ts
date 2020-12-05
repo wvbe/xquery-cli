@@ -3,16 +3,15 @@ import { loadModule } from 'fontoxpath-module-loader';
 import {
 	ChildProcessInstructionKill,
 	ChildProcessInstructionRun,
-	CrossProcessErrorMessage,
-	CrossProcessResultMessage,
-	MapIterator
+	FileResultEvent,
+	FileIterator
 } from './types';
 
-export const createChildProcessHandler = (mapIterator: MapIterator) => {
+export const createChildProcessHandler = (mapIterator: FileIterator) => {
 	return async (message: ChildProcessInstructionRun | ChildProcessInstructionKill) => {
 		try {
-			if (!process || !process.send) {
-				throw new Error('Not running from a NodeJS environment');
+			if (!process.send) {
+				throw new Error('Not running from a child process');
 			}
 			if (message.type === 'run') {
 				const {
@@ -25,7 +24,8 @@ export const createChildProcessHandler = (mapIterator: MapIterator) => {
 
 				process.send(null);
 				return;
-			} else if (message.type === 'kill') {
+			}
+			if (message.type === 'kill') {
 				process.exit();
 			}
 			// No other message types exist.
@@ -44,7 +44,7 @@ export const evaluateInChildProcesses = (
 	files: string[],
 	batchSize = Infinity,
 	data = {},
-	onResult: (message: CrossProcessErrorMessage | CrossProcessResultMessage, index: number) => void
+	onResult: (message: FileResultEvent, index: number) => void
 ) =>
 	(async function readNextBatch(fileList) {
 		const currentSlice = fileList.length > batchSize ? fileList.slice(0, batchSize) : fileList;
@@ -53,7 +53,7 @@ export const evaluateInChildProcesses = (
 		let i = 0;
 		const child = ChildProcess.fork(childProcessFile);
 
-		child.on('message', (message: CrossProcessErrorMessage | CrossProcessResultMessage) => {
+		child.on('message', (message: FileResultEvent) => {
 			if (message) {
 				return onResult(message, i++);
 			}

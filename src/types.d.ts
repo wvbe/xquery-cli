@@ -1,43 +1,45 @@
+export type FontoxpathOptions = object;
+
 export type XqueryModule = {
 	contents: string;
 };
 
-type QueryResult = number | string | Node | { [key: string]: QueryResult } | QueryResult[];
-
-type SerializableQueryResult =
-	| number
-	| string
-	| { [key: string]: SerializableQueryResult }
-	| SerializableQueryResult[];
-
-type FontoxpathOptions = object;
-export type ModuleList = {
+export type XqueryModules = {
 	libraries: XqueryModule[];
 	main: XqueryModule;
 };
 
-export type CrossProcessErrorObject = {
+export type XqueryResult<SerializedNode = false> =
+	| number
+	| string
+	| (SerializedNode extends false ? Node : SerializedNode)
+	| { [key: string]: XqueryResult<SerializedNode> }
+	| XqueryResult<SerializedNode>[];
+
+export type SerializableResult = XqueryResult<{ [key: string]: SerializableResult }>;
+
+export type SerializableError = {
 	message: string | null;
 	stack: string | null;
 };
-export type CrossProcessErrorMessage = {
+
+export type FileResultEvent = {
 	$fileName: string;
 	$fileNameBase?: string;
-	$error: CrossProcessErrorObject;
-	$value: null;
+	$error: null | SerializableError;
+	$value: null | SerializableResult[];
 };
 
-export type CrossProcessResultMessage = {
-	$fileName: string;
-	$fileNameBase?: string;
-	$error: null;
-	$value: SerializableQueryResult[];
+export type ContextlessResultEvent = {
+	$error: SerializableError | null;
+	$value: SerializableResult[] | null;
 };
+
 export type ChildProcessInstructionRun = {
 	type: 'run';
 	files: string[];
 	data: {
-		modules: ModuleList;
+		modules: XqueryModules;
 	};
 };
 
@@ -45,8 +47,8 @@ export type ChildProcessInstructionKill = {
 	type: 'kill';
 };
 
-export type MapIterator = (
-	modules: ModuleList,
+export type FileIterator = (
+	modules: XqueryModules,
 	fileName: string,
 	index: number,
 	allFileNames: string[]

@@ -8,7 +8,7 @@ import path from 'path';
 import { evaluateInChildProcesses } from './communication';
 import EVENTS_REPORTER from './parent-process/reporters/eventsToStdErr';
 import RESULTS_REPORTER from './parent-process/reporters/resultsToStdOut';
-import { ModuleList } from './types';
+import { XqueryModules, ContextlessResultEvent } from './types';
 import { evaluateUpdatingExpressionOnNode } from './child-process';
 
 const REPORTERS_BY_NAME = {
@@ -119,7 +119,7 @@ async function parseArgv(input: string[]): Promise<RunOptions> {
 	return runOptions;
 }
 
-async function getModulesFromInput(expression?: string, location?: string): Promise<ModuleList> {
+async function getModulesFromInput(expression?: string, location?: string): Promise<XqueryModules> {
 	return getModules(
 		(referrer: string, target: string) => {
 			const from = referrer ? path.dirname(referrer) : process.cwd();
@@ -175,9 +175,9 @@ async function evaluateAll(events: EventEmitter, input: string[], childProcessLo
 						{ debug: true }
 					)
 				).returnValue
-			});
+			} as ContextlessResultEvent);
 		} catch (e) {
-			events.emit('result', { $error: e });
+			events.emit('result', { $error: e } as ContextlessResultEvent);
 		}
 		return;
 	}

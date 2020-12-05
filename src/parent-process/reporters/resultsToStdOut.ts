@@ -1,12 +1,11 @@
-import { CrossProcessResultMessage, SerializableQueryResult } from './../../types.d';
 import { EventEmitter } from 'events';
 import npmlog from 'npmlog';
 import os from 'os';
-import { CrossProcessErrorMessage } from '../../types';
+import { FileResultEvent, ContextlessResultEvent, SerializableResult } from './../../types.d';
 
 npmlog.addLevel('rawOutput', 999999, {}, ' ');
 
-function stringifyResult(result: SerializableQueryResult): string | number {
+function stringifyResult(result: SerializableResult): string | number {
 	if (!result) {
 		return result;
 	}
@@ -28,26 +27,30 @@ function stringifyResult(result: SerializableQueryResult): string | number {
 }
 
 export default (events: EventEmitter, stream: NodeJS.WriteStream) => {
-	events.on('result', ({ $value, $error }) => {
+	events.on('result', ({ $value, $error }: ContextlessResultEvent) => {
 		if ($error) {
 			// An error occurred, but we're not logging that here
 			return;
 		}
-		const previousStream = npmlog.stream;
-		npmlog.stream = stream;
-		npmlog.rawOutput(null, stringifyResult($value));
-		npmlog.stream = previousStream;
+		if ($value) {
+			const previousStream = npmlog.stream;
+			npmlog.stream = stream;
+			npmlog.rawOutput(null, stringifyResult($value));
+			npmlog.stream = previousStream;
+		}
 	});
 
-	events.on('file', (file: CrossProcessResultMessage | CrossProcessErrorMessage) => {
-		if (file.$error) {
+	events.on('file', ({ $value, $error }: FileResultEvent) => {
+		if ($error) {
 			// An error occurred, but we're not logging that here
 			return;
 		}
-		npmlog.clearProgress();
-		file.$value.forEach(value => {
-			npmlog.rawOutput(null, stringifyResult(value));
-		});
-		npmlog.showProgress();
+		if ($value) {
+			npmlog.clearProgress();
+			$value.forEach(value => {
+				npmlog.rawOutput(null, stringifyResult(value));
+			});
+			npmlog.showProgress();
+		}
 	});
 };

@@ -4,13 +4,18 @@ import os from 'os';
 import {
 	ContextlessResultEvent,
 	FileResultEvent,
+	Options,
 	SerializableError,
 	SerializableResult
 } from '../types';
 
 npmlog.addLevel('rawOutput', 999999, {}, ' ');
 
-export const bindResultLoggers = (events: EventEmitter, stream: NodeJS.WriteStream) => {
+export const bindResultLoggers = (
+	_options: Options,
+	events: EventEmitter,
+	stream: NodeJS.WriteStream
+) => {
 	events.on('result', ({ $value, $error }: ContextlessResultEvent) => {
 		if ($error) {
 			// An error occurred, but we're not logging that here
@@ -66,7 +71,11 @@ function stringifyResult(result: SerializableResult): string | number {
 	return result;
 }
 
-export const bindEventLoggers = (events: EventEmitter, _stream: NodeJS.WriteStream) => {
+export const bindEventLoggers = (
+	options: Options,
+	events: EventEmitter,
+	_stream: NodeJS.WriteStream
+) => {
 	const timeStartGlob = Date.now();
 	const stats: {
 		files?: number;
@@ -130,12 +139,20 @@ export const bindEventLoggers = (events: EventEmitter, _stream: NodeJS.WriteStre
 		}
 	});
 
-	events.on('file', ({ $fileName, $error }: FileResultEvent) => {
+	events.on('file', ({ $fileName, $error, $isUpdate }: FileResultEvent) => {
 		npmlog.verbose(null, 'Evaluated %s', $fileName);
 
 		npmlogItem.name = ++totalProcessed + ' of ' + stats.files;
 		npmlogItem.completeWork(1);
 
+		if ($isUpdate) {
+			npmlog.verbose(
+				null,
+				options.isDryRun
+					? `Dry run: Not saving update to "${$fileName}"`
+					: `Saved update to "${$fileName}"`
+			);
+		}
 		if ($error) {
 			return logError('Error in file evaluation', $error);
 		}

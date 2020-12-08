@@ -1,3 +1,14 @@
+type Options = {
+	files: string[];
+	modules: XqueryModules;
+	hasGlobbed: boolean;
+	hasLocations: boolean;
+	hasEventLogging: boolean;
+	hasResultLogging: boolean;
+	isDryRun: boolean;
+	batchSize: number;
+};
+
 /**
  * XPath/XQuery typing
  */
@@ -43,15 +54,12 @@ export type ContextlessResultEvent = SerializableErrorMessage | SerializableResu
 export type FileResultEvent = {
 	$fileName: string;
 	$fileNameBase?: string;
+	$isUpdate: boolean;
 } & ContextlessResultEvent;
 
 export type ChildProcessInstructionRun = {
 	type: 'run';
-	files: string[];
-	data: {
-		modules: XqueryModules;
-	};
-};
+} & Options;
 
 export type ChildProcessInstructionKill = {
 	type: 'kill';
@@ -61,8 +69,7 @@ export type ChildProcessInstructionKill = {
  * Confguration object
  */
 export type FileIterator = (
-	modules: XqueryModules,
+	options: ChildProcessInstructionRun,
 	fileName: string,
-	index: number,
-	allFileNames: string[]
+	index: number
 ) => Promise<void>;

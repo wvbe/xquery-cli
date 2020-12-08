@@ -7,31 +7,21 @@ import path from 'path';
 import { evaluateUpdatingExpressionOnNode } from './child-process';
 import { evaluateInChildProcesses } from './communication';
 import { bindEventLoggers, bindResultLoggers } from './logging';
-import { ContextlessResultEvent, XqueryModules } from '../types';
+import { ContextlessResultEvent, Options, XqueryModules } from '../types';
 
-type RunOptions = {
-	files: string[];
-	hasGlobbed: boolean;
-	hasLocations: boolean;
-	hasEventLogging: boolean;
-	hasResultLogging: boolean;
-	options: {
-		main?: string;
-		level?: string;
-		expression?: string;
-		batch?: number;
-	};
-};
-async function parseArgv(input: string[]): Promise<RunOptions> {
-	const runOptions: RunOptions = {
+async function parseArgv(input: string[]): Promise<Options> {
+	const options: any = {
 		files: [],
+		modules: null,
 		hasGlobbed: false,
 		hasLocations: false,
 		hasEventLogging: true,
 		hasResultLogging: true,
-		options: {}
+		isDryRun: false,
+		batchSize: 25
 	};
 
+	let mainModuleName, cliExpression;
 	while (input.length) {
 		const slice = input.shift();
 		switch (slice) {
@@ -42,7 +32,12 @@ async function parseArgv(input: string[]): Promise<RunOptions> {
 			case '-m':
 			case '--module':
 			case '--main':
-				runOptions.options.main = input.shift();
+				mainModuleName = input.shift();
+				continue;
+
+			case '-d':
+			case '--dry':
+				options.isDryRun = true;
 				continue;
 
 			case '-l':
@@ -55,21 +50,13 @@ async function parseArgv(input: string[]): Promise<RunOptions> {
 			case '--xpath':
 			case '--xquery':
 			case '--xquf':
-				const expression = input.shift();
-				if (!expression) {
-					throw new Error(`Invalid expression "${expression}"`);
-				}
-				runOptions.options.expression = expression;
+				cliExpression = input.shift();
 				continue;
 
 			case '-b':
 			case '--batch':
 			case '--batch-size':
-				const size = input.shift();
-				if (!size) {
-					throw new Error(`Invalid batch size "${size}"`);
-				}
-				runOptions.options.batch = parseInt(size, 10);
+				options.batchSize = parseInt(input.shift() || String(options.batchSize), 10);
 				continue;
 
 			case '-g':
@@ -78,8 +65,8 @@ async function parseArgv(input: string[]): Promise<RunOptions> {
 				if (!glob) {
 					throw new Error(`Invalid globbing pattern "${glob}"`);
 				}
-				runOptions.hasGlobbed = true;
-				runOptions.files.splice(
+				options.hasGlobbed = true;
+				options.files.splice(
 					0,
 					0,
 					...(await globby([glob], {
@@ -91,21 +78,30 @@ async function parseArgv(input: string[]): Promise<RunOptions> {
 
 			case '-O':
 			case '--no-stderr':
-				runOptions.hasEventLogging = false;
+				options.hasEventLogging = false;
 				continue;
 
 			case '-o':
 			case '--no-stdout':
-				runOptions.hasResultLogging = false;
+				options.hasResultLogging = false;
 				continue;
 
 			default:
-				runOptions.hasLocations = true;
-				runOptions.files.push(slice);
+				options.hasLocations = true;
+				options.files.push(slice);
 		}
 	}
 
-	return runOptions;
+	options.modules = await getModulesFromInput(
+		cliExpression || (await getStreamedInputData()),
+		mainModuleName
+	);
+
+	if (!options.modules.main || !options.modules.main.contents) {
+		throw new Error('Your XPath expression should not be empty.');
+	}
+
+	return options;
 }
 
 async function getModulesFromInput(expression?: string, location?: string): Promise<XqueryModules> {
@@ -135,42 +131,27 @@ async function getStreamedInputData(): Promise<string | undefined> {
 }
 
 async function evaluateAll(events: EventEmitter, input: string[], childProcessLocation: string) {
-	const {
-		files,
-		hasGlobbed,
-		hasLocations,
-		hasEventLogging,
-		hasResultLogging,
-		options
-	} = await parseArgv(input);
+	const options = await parseArgv(input);
 
-	if (hasResultLogging) {
-		bindResultLoggers(events, process.stdout);
+	if (options.hasResultLogging) {
+		bindResultLoggers(options, events, process.stdout);
 	}
-	if (hasEventLogging) {
-		bindEventLoggers(events, process.stderr);
+	if (options.hasEventLogging) {
+		bindEventLoggers(options, events, process.stderr);
 	}
 
-	events.emit('files', files);
+	events.emit('files', options.files);
 
-	const modules = await getModulesFromInput(
-		options.expression || (await getStreamedInputData()),
-		options.main
-	);
-	events.emit('modules', modules);
-
-	if (!modules.main || !modules.main.contents) {
-		throw new Error('Your XPath expression should not be empty.');
-	}
+	events.emit('modules', options.modules);
 
 	// Send the schema and (parts of) the file list to child process(es)
 	events.emit('start');
-	if (!hasGlobbed && !hasLocations) {
+	if (!options.hasGlobbed && !options.hasLocations) {
 		try {
 			events.emit('result', {
 				$value: (
 					await evaluateUpdatingExpressionOnNode(
-						modules,
+						options.modules,
 						null,
 						{ cwd: process.cwd() },
 						{ debug: true }
@@ -183,25 +164,15 @@ async function evaluateAll(events: EventEmitter, input: string[], childProcessLo
 		return;
 	}
 
-	await evaluateInChildProcesses(
-		childProcessLocation,
-		files,
-		options.batch,
-		{
-			modules
-		},
-		(result, i) => {
-			if (result.$error) {
-				process.exitCode = 1;
-			}
-
-			result.$fileNameBase = path
-				.relative(process.cwd(), result.$fileName)
-				.replace(/\\/g, '/');
-
-			events.emit('file', result, i);
+	await evaluateInChildProcesses(childProcessLocation, options, (result, i) => {
+		if (result.$error) {
+			process.exitCode = 1;
 		}
-	);
+
+		result.$fileNameBase = path.relative(process.cwd(), result.$fileName).replace(/\\/g, '/');
+
+		events.emit('file', result, i);
+	});
 }
 
 export async function startParentProcess(input: string[], childProcessLocation: string) {
@@ -210,7 +181,6 @@ export async function startParentProcess(input: string[], childProcessLocation: 
 	try {
 		await evaluateAll(events, input, childProcessLocation);
 	} catch (error) {
-		console.log('---');
 		npmlog.disableProgress();
 		process.exitCode = 1;
 		events.emit('error', error);

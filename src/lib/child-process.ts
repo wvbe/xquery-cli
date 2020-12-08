@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import { slimdom, sync } from 'slimdom-sax-parser';
 import { createChildProcessHandler } from './communication';
 import {
+	ChildProcessInstructionRun,
 	FileResultEvent,
 	FontoxpathOptions,
 	SerializableResult,
@@ -60,44 +61,46 @@ export async function evaluateUpdatingExpressionOnNode(
 }
 
 async function evaluateUpdatingExpressionOnFile(
-	modules: XqueryModules,
+	options: ChildProcessInstructionRun,
 	fileName: string,
 	variables: object,
-	options: FontoxpathOptions
-): Promise<SerializableResult[]> {
+	fontoxpathOptions: FontoxpathOptions
+) {
 	const content = await fs.readFile(fileName, 'utf8');
 	const dom = sync(content);
-	const { returnValue, isUpdating } = await evaluateUpdatingExpressionOnNode(
-		modules,
+	const result = await evaluateUpdatingExpressionOnNode(
+		options.modules,
 		(dom as unknown) as Node,
 		variables,
-		options
+		fontoxpathOptions
 	);
 
-	if (isUpdating) {
+	if (result.isUpdating && !options.isDryRun) {
 		fs.writeFile(fileName, slimdom.serializeToWellFormedString(dom), 'utf8');
 	}
 
-	return returnValue;
+	return result;
 }
 
 export function startChildProcess() {
 	process.on(
 		'message',
-		createChildProcessHandler(async (modules, fileName) => {
+		createChildProcessHandler(async function onEvaluateFile(options, fileName) {
 			if (!process.send) {
 				throw new Error('Not running from a child process');
 			}
 			try {
+				const { returnValue, isUpdating } = await evaluateUpdatingExpressionOnFile(
+					options,
+					fileName,
+					{ 'document-uri': fileName },
+					{ debug: true }
+				);
 				process.send({
 					$fileName: fileName,
 					$error: null,
-					$value: await evaluateUpdatingExpressionOnFile(
-						modules,
-						fileName,
-						{ 'document-uri': fileName },
-						{ debug: true }
-					)
+					$value: returnValue,
+					$isUpdate: isUpdating
 				} as FileResultEvent);
 			} catch (error) {
 				process.send({
@@ -106,7 +109,8 @@ export function startChildProcess() {
 						message: error.message || null,
 						stack: error.stack || null
 					},
-					$value: null
+					$value: null,
+					$isUpdate: false
 				} as FileResultEvent);
 			}
 		})

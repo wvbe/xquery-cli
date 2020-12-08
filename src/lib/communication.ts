@@ -4,28 +4,28 @@ import {
 	ChildProcessInstructionKill,
 	ChildProcessInstructionRun,
 	FileIterator,
-	FileResultEvent
+	FileResultEvent,
+	Options
 } from '../types';
 
-export const createChildProcessHandler = (mapIterator: FileIterator) => {
-	return async (message: ChildProcessInstructionRun | ChildProcessInstructionKill) => {
+export const createChildProcessHandler = (onEvaluateFile: FileIterator) => {
+	return async (instruction: ChildProcessInstructionRun | ChildProcessInstructionKill) => {
 		try {
 			if (!process.send) {
 				throw new Error('Not running from a child process');
 			}
-			if (message.type === 'run') {
-				const {
-					files,
-					data: { modules }
-				} = message;
+			if (instruction.type === 'run') {
+				const { files, modules } = instruction;
 				modules.libraries.forEach(loadModule);
 
-				await Promise.all(files.map((...rest) => mapIterator(modules, ...rest)));
+				await Promise.all(
+					files.map((fileName, index) => onEvaluateFile(instruction, fileName, index))
+				);
 
 				process.send(null);
 				return;
 			}
-			if (message.type === 'kill') {
+			if (instruction.type === 'kill') {
 				process.exit();
 			}
 			// No other message types exist.
@@ -41,14 +41,17 @@ export const createChildProcessHandler = (mapIterator: FileIterator) => {
 // Serially send a bunch of file names off to a child process and call onResult every time there's a result
 export const evaluateInChildProcesses = (
 	childProcessFile: string,
-	files: string[],
-	batchSize = Infinity,
-	data = {},
+	options: Options,
+	// files: string[],
+	// batchSize = Infinity,
+	// options = {},
 	onResult: (message: FileResultEvent, index: number) => void
 ) =>
 	(async function readNextBatch(fileList) {
-		const currentSlice = fileList.length > batchSize ? fileList.slice(0, batchSize) : fileList;
-		const nextSlice = fileList.length > batchSize ? fileList.slice(batchSize) : [];
+		const currentSlice =
+			fileList.length > options.batchSize ? fileList.slice(0, options.batchSize) : fileList;
+		const nextSlice =
+			fileList.length > options.batchSize ? fileList.slice(options.batchSize) : [];
 
 		let i = 0;
 		const child = ChildProcess.fork(childProcessFile);
@@ -66,8 +69,8 @@ export const evaluateInChildProcesses = (
 
 		child.send({
 			type: 'run',
-			files: currentSlice,
-			data
+			...options,
+			files: currentSlice
 		} as ChildProcessInstructionRun);
 
 		await new Promise((resolve, reject) => {
@@ -77,4 +80,4 @@ export const evaluateInChildProcesses = (
 		if (nextSlice.length) {
 			await readNextBatch(nextSlice);
 		}
-	})(files);
+	})(options.files);

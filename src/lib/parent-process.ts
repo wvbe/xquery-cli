@@ -149,6 +149,7 @@ async function evaluateAll(events: EventEmitter, input: string[], childProcessLo
 	// Send the schema and (parts of) the file list to child process(es)
 	events.emit('start');
 	if (!options.hasGlobbed && !options.hasLocations) {
+		events.emit('expression', options.modules.main.contents);
 		try {
 			events.emit('result', {
 				$value: (

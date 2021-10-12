@@ -181,6 +181,7 @@ export const bindEventLoggers = (
 		} else {
 			npmlog.info(null, 'Quitting before a query was evaluated');
 		}
+
 		npmlog.info(null, 'Encountered %s errors', totalErrors);
 
 		if (exitCode > 0) {

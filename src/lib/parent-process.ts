@@ -1,14 +1,16 @@
 import { EventEmitter } from 'events';
 import { getModules } from 'fontoxpath-module-loader';
 import fs from 'fs/promises';
-import globby from 'globby';
+import glob from 'glob';
 import npmlog from 'npmlog';
 import path from 'path';
+import { promisify } from 'util';
 import { evaluateUpdatingExpressionOnNode } from './child-process';
 import { evaluateInChildProcesses } from './communication';
 import { bindEventLoggers, bindResultLoggers } from './logging';
 import { ContextlessResultEvent, Options, XqueryModules } from '../types';
 
+const promisedGlob = promisify(glob);
 async function parseArgv(input: string[]): Promise<Options> {
 	const options: any = {
 		files: [],
@@ -69,7 +71,7 @@ async function parseArgv(input: string[]): Promise<Options> {
 				options.files.splice(
 					0,
 					0,
-					...(await globby([glob], {
+					...(await promisedGlob(glob, {
 						cwd: process.cwd(),
 						absolute: false
 					}))

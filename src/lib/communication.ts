@@ -42,9 +42,6 @@ export const createChildProcessHandler = (onEvaluateFile: FileIterator) => {
 export const evaluateInChildProcesses = (
 	childProcessFile: string,
 	options: Options,
-	// files: string[],
-	// batchSize = Infinity,
-	// options = {},
 	onResult: (message: FileResultEvent, index: number) => void
 ) =>
 	(async function readNextBatch(fileList) {

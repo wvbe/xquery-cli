@@ -11,43 +11,72 @@ import { bindEventLoggers, bindResultLoggers } from './logging';
 import { ContextlessResultEvent, Options, XqueryModules } from '../types';
 
 const promisedGlob = promisify(glob);
+
+const SHORT_OPTION_MAPPING: { [short: string]: string } = {
+	m: 'module',
+	d: 'dry',
+	x: 'expression',
+	l: 'log-level',
+	p: 'positions',
+	b: 'batch-size',
+	g: 'glob',
+	O: 'no-stderr',
+	o: 'no-stdout'
+};
+
 async function parseArgv(input: string[]): Promise<Options> {
-	const options: any = {
+	const options: Omit<Options, 'modules'> & { modules?: Options['modules'] } = {
 		files: [],
-		modules: null,
 		hasGlobbed: false,
 		hasLocations: false,
 		hasEventLogging: true,
 		hasResultLogging: true,
 		isDryRun: false,
+		usePositionTracking: false,
 		batchSize: 25
 	};
 
 	let mainModuleName, cliExpression;
 	while (input.length) {
 		const slice = input.shift();
+		if (slice && slice.match(/^-[a-z]+$/)) {
+			input.unshift(
+				...slice
+					.substr(1)
+					.split('')
+					.map(short =>
+						SHORT_OPTION_MAPPING[short] ? `--${SHORT_OPTION_MAPPING[short]}` : null
+					)
+					.filter((long): long is string => Boolean(long))
+			);
+			continue;
+		}
 		switch (slice) {
+			case null:
+				continue;
+
 			case undefined:
 			case '--':
 				break;
 
-			case '-m':
 			case '--module':
 			case '--main':
 				mainModuleName = input.shift();
 				continue;
 
-			case '-d':
 			case '--dry':
 				options.isDryRun = true;
 				continue;
 
-			case '-l':
 			case '--log-level':
 				npmlog.level = input.shift();
 				continue;
 
-			case '-x':
+			case '--position':
+			case '--positions':
+				options.usePositionTracking = true;
+				continue;
+
 			case '--expression':
 			case '--xpath':
 			case '--xquery':
@@ -55,13 +84,11 @@ async function parseArgv(input: string[]): Promise<Options> {
 				cliExpression = input.shift();
 				continue;
 
-			case '-b':
 			case '--batch':
 			case '--batch-size':
 				options.batchSize = parseInt(input.shift() || String(options.batchSize), 10);
 				continue;
 
-			case '-g':
 			case '--glob':
 				const glob = input.shift();
 				if (!glob) {
@@ -78,12 +105,10 @@ async function parseArgv(input: string[]): Promise<Options> {
 				);
 				continue;
 
-			case '-O':
 			case '--no-stderr':
 				options.hasEventLogging = false;
 				continue;
 
-			case '-o':
 			case '--no-stdout':
 				options.hasResultLogging = false;
 				continue;
@@ -103,7 +128,7 @@ async function parseArgv(input: string[]): Promise<Options> {
 		throw new Error('Your XPath expression should not be empty.');
 	}
 
-	return options;
+	return options as Options;
 }
 
 async function getModulesFromInput(expression?: string, location?: string): Promise<XqueryModules> {
@@ -135,9 +160,8 @@ async function getStreamedInputData(): Promise<string | undefined> {
 async function evaluateAll(events: EventEmitter, input: string[], childProcessLocation: string) {
 	const options = await parseArgv(input);
 
-	if (options.hasResultLogging) {
-		bindResultLoggers(options, events, process.stdout);
-	}
+	bindResultLoggers(options, events, process.stdout);
+
 	if (options.hasEventLogging) {
 		bindEventLoggers(options, events, process.stderr);
 	}

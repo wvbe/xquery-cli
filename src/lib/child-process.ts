@@ -6,6 +6,7 @@ import {
 	ChildProcessInstructionRun,
 	FileResultEvent,
 	FontoxpathOptions,
+	SerializableNode,
 	SerializableResult,
 	XqueryModules,
 	XqueryResult
@@ -13,7 +14,13 @@ import {
 
 function serializeResult(result: XqueryResult): SerializableResult {
 	if (result instanceof slimdom.Node) {
-		return slimdom.serializeToWellFormedString(result as any);
+		const position = ((result as unknown) as {
+			position?: { line: number; column: number; start: number; end: number };
+		}).position;
+		return {
+			$$$position: position ? position : null,
+			$$$string: slimdom.serializeToWellFormedString(result as any)
+		} as SerializableNode;
 	}
 
 	if (Array.isArray(result)) {
@@ -67,7 +74,9 @@ async function evaluateUpdatingExpressionOnFile(
 	fontoxpathOptions: FontoxpathOptions
 ) {
 	const content = await fs.readFile(fileName, 'utf8');
-	const dom = sync(content);
+	const dom = sync(content, {
+		position: options.usePositionTracking
+	});
 	const result = await evaluateUpdatingExpressionOnNode(
 		options.modules,
 		(dom as unknown) as Node,

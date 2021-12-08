@@ -6,13 +6,14 @@ import {
 	FileResultEvent,
 	Options,
 	SerializableError,
+	SerializableNode,
 	SerializableResult
 } from '../types';
 
 npmlog.addLevel('rawOutput', 999999, {}, ' ');
 
 export const bindResultLoggers = (
-	_options: Options,
+	options: Options,
 	events: EventEmitter,
 	stream: NodeJS.WriteStream
 ) => {
@@ -29,24 +30,29 @@ export const bindResultLoggers = (
 		}
 	});
 
-	events.on('file', ({ $value, $error }: FileResultEvent) => {
+	events.on('file', ({ $value, $error, $fileName }: FileResultEvent) => {
 		if ($error) {
 			// An error occurred, but we're not logging that here
 			return;
 		}
-		if ($value) {
-			npmlog.clearProgress();
-
-			const previousStream = npmlog.stream;
-
-			npmlog.stream = stream;
-			$value.forEach(value => {
-				npmlog.rawOutput(null, stringifyResult(value));
-			});
-			npmlog.stream = previousStream;
-
-			npmlog.showProgress();
+		if (!$value) {
+			return;
 		}
+
+		npmlog.clearProgress();
+		const previousStream = npmlog.stream;
+		$value.forEach(value => {
+			const position = (value as SerializableNode).$$$position;
+			if (position) {
+				npmlog.info('@', `${$fileName}:${position.line}:${position.column}`);
+			}
+			if (options.hasResultLogging) {
+				npmlog.stream = stream;
+				npmlog.rawOutput(null, stringifyResult(value));
+				npmlog.stream = previousStream;
+			}
+		});
+		npmlog.showProgress();
 	});
 };
 
@@ -63,6 +69,9 @@ function stringifyResult(result: SerializableResult): string | number {
 	}
 
 	if (typeof result === 'object') {
+		if ('$$$string' in result) {
+			return (result as SerializableNode).$$$string;
+		}
 		return Object.keys(result)
 			.map((key: string) => result[key])
 			.join('\t');

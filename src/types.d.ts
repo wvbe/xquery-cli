@@ -6,6 +6,7 @@ type Options = {
 	hasEventLogging: boolean;
 	hasResultLogging: boolean;
 	isDryRun: boolean;
+	usePositionTracking: boolean;
 	batchSize: number;
 };
 
@@ -30,10 +31,25 @@ export type XqueryResult<SerializedNode = false> =
 	| { [key: string]: XqueryResult<SerializedNode> }
 	| XqueryResult<SerializedNode>[];
 
+type SerializableNodePosition = {
+	line: number;
+	column: number;
+	start: number;
+	end: number;
+};
+
+/**
+ * A DOM node, but ready to be JSON encoded.
+ */
+type SerializableNode = {
+	$$$position: SerializableNodePosition | null;
+	$$$string: string;
+};
+
 /**
  * Serializing content across the parent- and child processes:
  */
-export type SerializableResult = XqueryResult<{ [key: string]: SerializableResult }>;
+export type SerializableResult = XqueryResult<SerializableNode>;
 
 export type SerializableError = {
 	message: string | null;

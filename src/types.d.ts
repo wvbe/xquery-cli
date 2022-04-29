@@ -87,5 +87,5 @@ export type ChildProcessInstructionKill = {
 export type FileIterator = (
 	options: ChildProcessInstructionRun,
 	fileName: string,
-	index: number
+	index: number,
 ) => Promise<void>;

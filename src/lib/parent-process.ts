@@ -5,10 +5,11 @@ import glob from 'glob';
 import npmlog from 'npmlog';
 import path from 'path';
 import { promisify } from 'util';
+
+import { ContextlessResultEvent, Options, XqueryModules } from '../types';
 import { evaluateUpdatingExpressionOnNode } from './child-process';
 import { evaluateInChildProcesses } from './communication';
 import { bindEventLoggers, bindResultLoggers } from './logging';
-import { ContextlessResultEvent, Options, XqueryModules } from '../types';
 
 const promisedGlob = promisify(glob);
 
@@ -21,7 +22,7 @@ const SHORT_OPTION_MAPPING: { [short: string]: string } = {
 	b: 'batch-size',
 	g: 'glob',
 	O: 'no-stderr',
-	o: 'no-stdout'
+	o: 'no-stdout',
 };
 
 async function parseArgv(input: string[]): Promise<Options> {
@@ -33,7 +34,7 @@ async function parseArgv(input: string[]): Promise<Options> {
 		hasResultLogging: true,
 		isDryRun: false,
 		usePositionTracking: false,
-		batchSize: 25
+		batchSize: 25,
 	};
 
 	let mainModuleName, cliExpression;
@@ -44,10 +45,8 @@ async function parseArgv(input: string[]): Promise<Options> {
 				...slice
 					.substr(1)
 					.split('')
-					.map(short =>
-						SHORT_OPTION_MAPPING[short] ? `--${SHORT_OPTION_MAPPING[short]}` : null
-					)
-					.filter((long): long is string => Boolean(long))
+					.map((short) => (SHORT_OPTION_MAPPING[short] ? `--${SHORT_OPTION_MAPPING[short]}` : null))
+					.filter((long): long is string => Boolean(long)),
 			);
 			continue;
 		}
@@ -100,8 +99,8 @@ async function parseArgv(input: string[]): Promise<Options> {
 					0,
 					...(await promisedGlob(glob, {
 						cwd: process.cwd(),
-						absolute: false
-					}))
+						absolute: false,
+					})),
 				);
 				continue;
 
@@ -121,7 +120,7 @@ async function parseArgv(input: string[]): Promise<Options> {
 
 	options.modules = await getModulesFromInput(
 		cliExpression || (await getStreamedInputData()),
-		mainModuleName
+		mainModuleName,
 	);
 
 	if (!options.modules.main || !options.modules.main.contents) {
@@ -138,7 +137,7 @@ async function getModulesFromInput(expression?: string, location?: string): Prom
 			return path.resolve(from, target);
 		},
 		(target: string) => (target ? fs.readFile(target, 'utf8') : expression),
-		location
+		location,
 	);
 }
 
@@ -154,7 +153,7 @@ async function getStreamedInputData(): Promise<string | undefined> {
 		}
 	});
 
-	return new Promise(resolve => process.stdin.on('end', () => resolve(data)));
+	return new Promise((resolve) => process.stdin.on('end', () => resolve(data)));
 }
 
 async function evaluateAll(events: EventEmitter, input: string[], childProcessLocation: string) {
@@ -181,9 +180,9 @@ async function evaluateAll(events: EventEmitter, input: string[], childProcessLo
 						options.modules,
 						null,
 						{ cwd: process.cwd() },
-						{ debug: true }
+						{ debug: true },
 					)
-				).returnValue
+				).returnValue,
 			} as ContextlessResultEvent);
 		} catch (e) {
 			events.emit('result', { $error: e } as ContextlessResultEvent);

@@ -1,13 +1,14 @@
 import { EventEmitter } from 'events';
 import npmlog from 'npmlog';
 import os from 'os';
+
 import {
 	ContextlessResultEvent,
 	FileResultEvent,
 	Options,
 	SerializableError,
 	SerializableNode,
-	SerializableResult
+	SerializableResult,
 } from '../types';
 
 npmlog.addLevel('rawOutput', 999999, {}, ' ');
@@ -15,7 +16,7 @@ npmlog.addLevel('rawOutput', 999999, {}, ' ');
 export const bindResultLoggers = (
 	options: Options,
 	events: EventEmitter,
-	stream: NodeJS.WriteStream
+	stream: NodeJS.WriteStream,
 ) => {
 	events.on('result', ({ $value, $error }: ContextlessResultEvent) => {
 		if ($error) {
@@ -41,7 +42,7 @@ export const bindResultLoggers = (
 
 		npmlog.clearProgress();
 		const previousStream = npmlog.stream;
-		$value.forEach(value => {
+		$value.forEach((value) => {
 			const position = (value as SerializableNode).$$$position;
 			if (position) {
 				npmlog.info('@', `${$fileName}:${position.line}:${position.column}`);
@@ -65,7 +66,7 @@ function stringifyResult(result: SerializableResult): string | number {
 	}
 
 	if (Array.isArray(result)) {
-		return result.map(res => stringifyResult(res)).join(os.EOL);
+		return result.map((res) => stringifyResult(res)).join(os.EOL);
 	}
 
 	if (typeof result === 'object') {
@@ -83,7 +84,7 @@ function stringifyResult(result: SerializableResult): string | number {
 export const bindEventLoggers = (
 	options: Options,
 	events: EventEmitter,
-	_stream: NodeJS.WriteStream
+	_stream: NodeJS.WriteStream,
 ) => {
 	const timeStartGlob = Date.now();
 	const stats: {
@@ -91,28 +92,28 @@ export const bindEventLoggers = (
 		totalTime?: number;
 	} = {};
 
-	events.on('files', files => {
+	events.on('files', (files) => {
 		stats.files = files.length;
 
 		npmlog.info(
 			null,
 			'Located %s files in %s milliseconds',
 			stats.files,
-			Date.now() - timeStartGlob
+			Date.now() - timeStartGlob,
 		);
 	});
 
-	events.on('modules', modules => {
+	events.on('modules', (modules) => {
 		npmlog.info(
 			null,
 			'Using %s main and %s library XQuery modules',
 			modules.main ? 1 : 0,
-			modules.libraries.length
+			modules.libraries.length,
 		);
 	});
 
-	events.on('expression', expression =>
-		npmlog.verbose(null, 'Using expression:\n%s', expression)
+	events.on('expression', (expression) =>
+		npmlog.verbose(null, 'Using expression:\n%s', expression),
 	);
 
 	let npmlogItem: any;
@@ -133,9 +134,7 @@ export const bindEventLoggers = (
 		npmlog.error(caption);
 		(error.stack || error.message || '')
 			.split('\n')
-			.forEach((line: string, i: number) =>
-				i ? npmlog.error(null, line) : npmlog.error(line)
-			);
+			.forEach((line: string, i: number) => (i ? npmlog.error(null, line) : npmlog.error(line)));
 	}
 
 	events.on('error', (error: SerializableError) => {
@@ -159,7 +158,7 @@ export const bindEventLoggers = (
 				null,
 				options.isDryRun
 					? `Dry run: Not saving update to "${$fileName}"`
-					: `Saved update to "${$fileName}"`
+					: `Saved update to "${$fileName}"`,
 			);
 		}
 		if ($error) {
@@ -167,7 +166,7 @@ export const bindEventLoggers = (
 		}
 	});
 
-	events.on('end', exitCode => {
+	events.on('end', (exitCode) => {
 		stats.totalTime = Date.now() - timeStartAnalysis;
 
 		const msPerDocument = (stats.totalTime / totalProcessed).toFixed(2);
@@ -181,7 +180,7 @@ export const bindEventLoggers = (
 				'Evaluated %s out of %s files in %s milliseconds',
 				totalProcessed,
 				stats.files,
-				stats.totalTime
+				stats.totalTime,
 			);
 			npmlog.verbose(null, '%s milliseconds per document', msPerDocument);
 			npmlog.verbose(null, '%s documents per second', documentPerSecond);

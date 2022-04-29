@@ -3,8 +3,6 @@
 This lib lets you run XPath/XQuery or XQUF on XML files. Uses child processes to support traversing
 large amounts of content.
 
-
-
 ### Install
 
 ```sh
@@ -14,8 +12,6 @@ npm i xquery-cli -g
 You can now use the `xq` command.
 
 Alternative to installing `xq`, you can run `npx xquery-cli`
-
-
 
 ### XPath and XQuery 3.1 Expressions
 
@@ -37,8 +33,6 @@ echo "fn:current-date()" | xq
 cat ./examples/simple-example.xqm | xq
 curl -s https://pastebin.com/raw/53pFDEbk | xq
 ```
-
-
 
 ### XML files
 
@@ -62,8 +56,6 @@ xq -g "./examples/**/*.xml" -x "()"
 If you want to use both pattern expansion and the `--glob` flag you are a mad lad. It would be
 useful to know that you may get duplicate results, and results may be ordered differently.
 
-
-
 ### Updating XML
 
 [fontoxpath](https://www.npmjs.com/package/fontoxpath) supports XQuery Update Facility, therefore
@@ -74,8 +66,6 @@ combine with the `--dry` option to not _actually_ make file changes just yet.
 ```sh
 xq ./foo.xml -x "replace node /* with <bar />"
 ```
-
-
 
 ### Variables
 
@@ -88,8 +78,6 @@ xq ./foo.xml -x "\$document-uri"
 
 On Windows you might _not_ have to escape the `$`.
 
-
-
 ### Reporting
 
 By default XQuery returns are logged to STDOUT, and event data is logged to STDERR. Use
@@ -99,14 +87,12 @@ By default XQuery returns are logged to STDOUT, and event data is logged to STDE
 xq -x "fontoxpath:version()" --no-stderr
 ```
 
-You can also control the amount of messages, by picking to limit yourself to `rawOutput``verbose`,
+You can also control the amount of messages, by picking to limit yourself to ` rawOutput``verbose `,
 `info`, or `error` and everything "above" it like so:
 
 ```sh
 xq -x "fontoxpath:version()" --log-level verbose
 ```
-
-
 
 ## Acknowledgements
 
